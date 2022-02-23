@@ -40,7 +40,7 @@ class PrivateTagApiTests(TestCase):
         """Test retrieving logged in user tags should succeed"""
         Tag.objects.create(name='Vegan', user=self.user)
         Tag.objects.create(name='Dessert', user=self.user)
-        tags = Tag.objects.all().order_by('-name')
+        tags = Tag.objects.all().order_by('name')
         
         res = self.client.get(TAGS_URL)
 
