@@ -48,7 +48,7 @@ class PrivateTagApiTests(TestCase):
         serializer = TagSerializer(tags, many=True)
         self.assertEqual(res.json(), serializer.data)
         
-    def test_tags_are_attached_to_user(self):
+    def test_tags_are_limited_to_user(self):
         """Test that users only have access to their own tags"""
         user2 = get_user_model().objects.create_user(email='test@test.com', password='123456')
         Tag.objects.create(name='Dessert', user=user2)
