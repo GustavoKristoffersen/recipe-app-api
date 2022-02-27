@@ -17,7 +17,12 @@ class BaseRecipeAttrViewSet(viewsets.GenericViewSet, mixins.ListModelMixin, mixi
 
     def get_queryset(self):
         """Return objects for current authenticated user only"""
-        return self.queryset.filter(user=self.request.user).order_by('name')
+        assigned_only = self.request.query_params.get('assigned_only', 'false')
+        queryset = self.queryset
+        if assigned_only == 'true':
+            queryset = queryset.filter(recipe__isnull=False)
+
+        return queryset.filter(user=self.request.user).order_by('name').distinct()
 
     def perform_create(self, serializer):
         """Creates a new object for the current user"""

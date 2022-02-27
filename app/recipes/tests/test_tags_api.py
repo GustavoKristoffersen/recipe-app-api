@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Tag
+from core.models import Tag, Recipe
 from recipes.serializers import TagSerializer
 
 
@@ -75,5 +75,49 @@ class PrivateTagApiTests(TestCase):
         res = self.client.post(TAGS_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_tags_assingned_to_recipes(self):
+        """Test retrieving only the tags that area assigned to recipes"""
+        tag1 = Tag.objects.create(user=self.user, name='Vegan')
+        tag2 = Tag.objects.create(user=self.user, name='Cakes')
+        recipe = Recipe.objects.create(
+            user=self.user,
+            title='Chocolate cake',
+            time_minutes=35,
+            price=15.20
+        )
+        recipe.tags.add(tag1)
+
+        res = self.client.get(TAGS_URL, {'assigned_only': 'true'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        serializer1 = TagSerializer(tag1)
+        serializer2 = TagSerializer(tag2)
+        self.assertIn(serializer1.data, res.json())
+        self.assertNotIn(serializer2.data, res.json())
+
+    def test_tags_assingned_unique(self):
+        """Test that the tags retrieved are not being duplicated"""
+        tag1 = Tag.objects.create(user=self.user, name='Vegan')
+        tag2 = Tag.objects.create(user=self.user, name='Cake')
+        recipe1 = Recipe.objects.create(
+            user=self.user,
+            title='Chocolate cake',
+            time_minutes=45,
+            price=15.00
+        )
+        recipe2 = Recipe.objects.create(
+            user=self.user,
+            title='Strawberry cake',
+            time_minutes=45,
+            price=15.00
+        )
+        recipe1.tags.add(tag1)
+        recipe2.tags.add(tag1)
+
+        res = self.client.get(TAGS_URL, {'assigned_only': 'true'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.json()), 1)
 
         
