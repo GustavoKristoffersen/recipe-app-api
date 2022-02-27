@@ -1,3 +1,8 @@
+import tempfile
+import os
+
+from PIL import Image
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -10,6 +15,11 @@ from recipes.serializers import RecipeSerializer, RecipeDetailSerializer
 
 
 RECIPES_URL = reverse('recipes:recipe-list')
+
+
+def get_image_upload_url(recipe_id):
+    """Returns a URL for recipe image upload"""
+    return reverse('recipes:recipe-upload-image', args=[recipe_id])
 
 
 def get_recipe_detail_url(recipe_id):
@@ -195,3 +205,79 @@ class PrivateRecipeApiTests(TestCase):
         self.assertEqual(recipe.price, payload['price'])
         self.assertEqual(recipe.tags.count(), 0)
 
+    def test_retrieving_recipes_filtered_by_tags(self):
+        """Test retrieving recipe with specific tags"""
+        recipe1 = get_sample_recipe(user=self.user, title='Something with mushrooms idk')
+        recipe2 = get_sample_recipe(user=self.user, title='Coconut pancakes')
+        recipe3 = get_sample_recipe(user=self.user, title='Eggs and bacon')
+        tag1 = get_sample_tag(user=self.user, name='Vegan')
+        tag2 = get_sample_tag(user=self.user, name='Pancakes')
+        recipe1.tags.add(tag1)
+        recipe2.tags.add(tag2)
+
+        res = self.client.get(RECIPES_URL, {'tags': f'{tag1.id},{tag2.id}'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+        self.assertIn(serializer1.data, res.json())
+        self.assertIn(serializer2.data, res.json())
+        self.assertNotIn(serializer3.data, res.json())
+
+    def test_retrieving_recipes_filtered_by_ingredients(self):
+        """Test retrieving recipes with specific ingredients"""
+        recipe1 = get_sample_recipe(user=self.user, title='Something with mushrooms idk')
+        recipe2 = get_sample_recipe(user=self.user, title='Coconut pancakes')
+        recipe3 = get_sample_recipe(user=self.user, title='Eggs and bacon')
+        ingredient1 = get_sample_ingredient(user=self.user, name='Mushroom')
+        ingredient2 = get_sample_ingredient(user=self.user, name='Bacon')
+        recipe1.ingredients.add(ingredient1)
+        recipe2.ingredients.add(ingredient2)
+
+        res = self.client.get(RECIPES_URL, {'ingredients': f'{ingredient1.id},{ingredient2.id}'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+        self.assertIn(serializer1.data, res.json())
+        self.assertIn(serializer2.data, res.json())
+        self.assertNotIn(serializer3.data, res.json())
+
+
+class RecipeImageUploadingTests(TestCase):
+    """Tests for recipe image uploads"""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create(
+            email='gustavo@test.com',
+            password='123456'
+        )
+        self.recipe = get_sample_recipe(self.user)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def tearDown(self):
+        self.recipe.image.delete()
+
+    def test_uploading_image_to_recipe(self):
+        """Test uploading an image to a recipe"""
+        url = get_image_upload_url(self.recipe.id)
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as ntf:
+            img = Image.new('RGB', (10, 10))
+            img.save(ntf, format='JPEG')
+            ntf.seek(0)
+            res = self.client.post(url, {'image': ntf}, format='multipart')
+
+        self.recipe.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('image', res.json())
+        self.assertTrue(os.path.exists(self.recipe.image.path))
+
+    def test_uploading_image_incorrectly(self):
+        """Test uploading an invalid image"""
+        url = get_image_upload_url(self.recipe.id)
+        res = self.client.post(url, {'image': 'wrong image'}, format='multipart')
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
