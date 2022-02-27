@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 
-from core.models import Tag, Ingredient, Recipe
+from core.models import Tag, Ingredient, Recipe, recipe_image_file_path
 
 
 def get_sample_user(email='gustavo@test.com', password='123456'):
@@ -86,3 +87,14 @@ class ModelTests(TestCase):
         )
 
         self.assertEqual(str(recipe), recipe.title)
+
+    @patch('uuid.uuid4')
+    def test_recipe_file_name_uuid(self, mock_uuid):
+        """Test that images are saved on the correct location and filename"""
+        uuid_name = 'uuid testing'
+        mock_uuid.return_value = uuid_name
+
+        file_path = recipe_image_file_path(None, 'myimage.jpg')
+        desired_path = f'uploads/recipes/{uuid_name}.jpg'
+
+        self.assertEqual(file_path, desired_path)

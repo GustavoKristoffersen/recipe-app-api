@@ -1,6 +1,16 @@
+import uuid
+import os
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+
+
+def recipe_image_file_path(instance, file_name):
+    """Generates file path for recipe images"""
+    ext = file_name.split('.')[-1]
+    file_name = f'{uuid.uuid4()}.{ext}'
+    
+    return os.path.join('uploads/recipes/', file_name)
 
 
 class UserManager(BaseUserManager):
@@ -73,6 +83,7 @@ class Recipe(models.Model):
     link = models.CharField(max_length=2048, blank=True)
     ingredients = models.ManyToManyField('Ingredient')
     tags = models.ManyToManyField('Tag')
+    image = models.ImageField(null=True, upload_to=recipe_image_file_path)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE
