@@ -12,6 +12,6 @@ sudo docker-compose up
 1 - Execute the following command on the project's root folder
 
 ```
-sudo docker-compose run app sh -c "python manage.py runserver"
+sudo docker-compose run app sh -c "python manage.py test"
 ```
 
