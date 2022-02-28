@@ -1,5 +1,5 @@
 # recipe-app-api
-This is a simple Django API for managing recipes. The aim while building this project was to practice Docker and Docker-compose concepts as well as the Test Driven Development flow applied to unit tests. This project contains tests for models, views, django commands, image uploading and more.
+This is a Django API for managing recipes. The aim while building this project was to practice Docker and Docker-compose concepts as well as the Test Driven Development flow applied to unit tests. This project contains tests for models, views, django commands, image uploading and more.
 
 ## :bookmark_tabs: How to execute this project
 
